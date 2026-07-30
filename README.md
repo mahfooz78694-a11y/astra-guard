@@ -43,7 +43,7 @@ $$X_{deflected} = X_{live} \cdot P_{\parallel} = (X_{clean} + \delta) V_k V_k^T 
 Because adversarial noise $\delta$ predominantly concentrates in orthogonal nullspace dimensions ($\delta \in V_k^{\perp}$), the term $\delta_{\perp} \to 0$, effectively deflecting the perturbation while preserving baseline feature dynamics.
 ### Non-Differentiable Gradient Isolation Logic
 To prevent gradient-based adaptive white-box attacks (e.g., Backward Pass Differentiable Approximation / BPDA) from estimating gradients through the guardrail, $P_{\parallel}$ is permanently detached from the autograd computation graph:
-$$\frac{\partial P_{\parallel}}{\partial X} \equiv 0 \quad (\text{requires\_grad} = \text{False})$$
+$$\frac{\partial P_{\parallel}}{\partial X} \equiv 0 \quad (\text{requires}\_\text{grad} = \text{False})$$
 ---
 ## 🏗️ System Architecture & Data Flow Pipeline
 ```text
