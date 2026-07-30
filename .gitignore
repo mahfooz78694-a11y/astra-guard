@@ -1,0 +1,6 @@
+__pycache__/
+build/
+dist/
+*.egg-info/
+!astra_guard/*.so
+!astra_guard/*.pyd

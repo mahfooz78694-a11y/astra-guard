@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel", "Cython>=3.0.0", "numpy>=1.22.0", "torch>=2.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "astra-guard"
+version = "2.0.0"
+authors = [{ name = "MD Mahfooz & Alsaad Alam", email = "mahfooz78694@gmail.com" }]
+description = "VORTEX-SVD Engine v2.0: Zero-Retraining AI Activation Security Framework"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["torch>=2.0.0", "numpy>=1.22.0"]
+
+[project.urls]
+Homepage = "https://github.com/mahfooz78694-a11y/astra-guard"
+Repository = "https://github.com/mahfooz78694-a11y/astra-guard"
+DOI = "https://doi.org/10.5281/zenodo.21532310"
