@@ -1,5 +1,6 @@
 # ASTRA Guardrail (`astra-guard`)
 ## VORTEX-SVD Engine v2.0: Zero-Retraining AI Activation Security & Deflection Framework
+[![CI/CD Pipeline](https://github.com/mahfooz78694-a11y/astra-guard/actions/workflows/ci.yml/badge.svg)](https://github.com/mahfooz78694-a11y/astra-guard/actions/workflows/ci.yml)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21532310.svg)](https://doi.org/10.5281/zenodo.21532310)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-green.svg)](pyproject.toml)
