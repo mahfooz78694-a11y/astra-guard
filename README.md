@@ -19,11 +19,11 @@ In production AI deployments, adversarial attacks (such as FGSM, PGD, and activa
 ## 🛠️ Installation & Build Setup
 ### Option 1: Direct Pip Installation (Production)
 ```bash
-pip install git+[https://github.com/mahfooz78694-a11y/astra-guard.git](https://github.com/mahfooz78694-a11y/astra-guard.git)
+pip install git+ https://github.com/mahfooz78694-a11y/astra-guard.git
 ```
 ### Option 2: Local Source Installation (Developer Mode)
 ```bash
-git clone [https://github.com/mahfooz78694-a11y/astra-guard.git](https://github.com/mahfooz78694-a11y/astra-guard.git)
+git clone https://github.com/mahfooz78694-a11y/astra-guard.git
 cd astra-guard
 pip install -e .
 ```
@@ -43,8 +43,13 @@ $$X_{deflected} = X_{live} \cdot P_{\parallel} = (X_{clean} + \delta) V_k V_k^T 
 Because adversarial noise $\delta$ predominantly concentrates in orthogonal nullspace dimensions ($\delta \in V_k^{\perp}$), the term $\delta_{\perp} \to 0$, effectively deflecting the perturbation while preserving baseline feature dynamics.
 ### Non-Differentiable Gradient Isolation Logic
 To prevent gradient-based adaptive white-box attacks (e.g., Backward Pass Differentiable Approximation / BPDA) from estimating gradients through the guardrail, $P_{\parallel}$ is permanently detached from the autograd computation graph:
-$$\frac{\partial P_{\parallel}}{\partial X} \equiv 0 \quad (\text{requires\_grad} = \text{False})$$
----
+$$
+\frac{\partial P_{\parallel}}{\partial X} = 0
+$$
+
+> **Note:** Autograd graph is permanently detached (`requires_grad = False`) to prevent adaptive gradient attacks.
+> 
+
 ## 🏗️ System Architecture & Data Flow Pipeline
 ```text
                   [ Incoming Adversarial Input Tensor ]
