@@ -18,6 +18,15 @@ class VORTEXSVDEngine:
             try:
                 x_clean = torch.nan_to_num(baseline_activations, nan=0.0, posinf=1e4, neginf=-1e4)
                 x_flat = self._unroll_to_2d(x_clean)
+
+                # Zero-variance check and mitigation
+                var = torch.var(x_flat, dim=0, unbiased=False)
+                zero_var_mask = var < 1e-6
+                if zero_var_mask.any():
+                    noise = torch.randn_like(x_flat) * 1e-6
+                    noise = noise * zero_var_mask.float().unsqueeze(0)
+                    x_flat = x_flat + noise
+
                 x_f64 = x_flat.to(dtype=torch.float64)
                 try:
                     U, S, Vh = torch.linalg.svd(x_f64, full_matrices=False)
@@ -66,13 +75,15 @@ class VORTEXSVDEngine:
                 return x
 
     def _unroll_to_2d(self, x: torch.Tensor) -> torch.Tensor:
+        x = x.contiguous()
         if x.dim() == 2: return x
-        elif x.dim() == 4: return x.permute(0, 2, 3, 1).reshape(-1, x.shape[1])
+        elif x.dim() == 4: return x.permute(0, 2, 3, 1).contiguous().reshape(-1, x.shape[1])
         elif x.dim() == 3: return x.reshape(-1, x.shape[2])
         else: raise ValueError('Invalid Rank')
 
     def _restore_shape(self, x_flat: torch.Tensor, orig_shape: torch.Size) -> torch.Tensor:
+        x_flat = x_flat.contiguous()
         if len(orig_shape) == 2: return x_flat
-        elif len(orig_shape) == 4: return x_flat.reshape(orig_shape[0], orig_shape[2], orig_shape[3], orig_shape[1]).permute(0, 3, 1, 2)
+        elif len(orig_shape) == 4: return x_flat.reshape(orig_shape[0], orig_shape[2], orig_shape[3], orig_shape[1]).permute(0, 3, 1, 2).contiguous()
         elif len(orig_shape) == 3: return x_flat.reshape(orig_shape)
         else: raise ValueError('Invalid Dim')
