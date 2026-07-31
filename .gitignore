@@ -1,6 +1,9 @@
 __pycache__/
+.pytest_cache/
 build/
 dist/
 *.egg-info/
-!astra_guard/*.so
-!astra_guard/*.pyd
+*.so
+*.o
+*.pyd
+*.pt
