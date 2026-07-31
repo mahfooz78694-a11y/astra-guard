@@ -7,3 +7,4 @@ dist/
 *.o
 *.pyd
 *.pt
+astra_guard/core.cpp
