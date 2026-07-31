@@ -26,7 +26,7 @@ def export_protected_onnx(
         logger.info(f'[ASTRA EXPORT] Exporting guarded ONNX model to {export_path}...')
         torch.onnx.export(
             model,
-            dummy_input,
+            (dummy_input,),
             export_path,
             export_params=True,
             opset_version=opset_version,
