@@ -1,0 +1,7 @@
+astra-guardrail-core
+torch
+torchvision
+gradio>=4.0.0
+plotly
+numpy
+pillow
