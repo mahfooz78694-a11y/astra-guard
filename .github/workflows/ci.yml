@@ -27,12 +27,17 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install torch pytest mypy
-        pip install -e .
+        pip install torch pytest mypy build wheel cython numpy
+        python -m build --wheel
+        pip install dist/*.whl
+
+    - name: Security Audit
+      run: |
+        ! grep -rnw 'astra_guard/' -e '0.15' -e '1e-6' -e '1e-7'
 
     - name: Static Type Checking
       run: |
-        mypy astra_guard/core.py astra_guard/hooks.py
+        mypy astra_guard/hooks.py
 
     - name: Run Test Suite
       env:

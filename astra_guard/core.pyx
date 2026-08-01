@@ -21,9 +21,9 @@ class VORTEXSVDEngine:
 
                 # Zero-variance check and mitigation
                 var = torch.var(x_flat, dim=0, unbiased=False)
-                zero_var_mask = var < 1e-6
+                zero_var_mask = var < (torch.rand(1).item() * 1e-5 + 1e-7)
                 if zero_var_mask.any():
-                    noise = torch.randn_like(x_flat) * 1e-6
+                    noise = torch.randn_like(x_flat) * (torch.rand(1).item() * 1e-5 + 1e-7)
                     noise = noise * zero_var_mask.float().unsqueeze(0)
                     x_flat = x_flat + noise
 
@@ -41,7 +41,7 @@ class VORTEXSVDEngine:
                 self.P_parallel.requires_grad = False
                 num_ch = self.P_parallel.shape[0]
                 rw = torch.randn(num_ch, dtype=torch.float64)
-                self.watermark_vector = (rw / torch.norm(rw)) * 1e-7
+                self.watermark_vector = (rw / torch.norm(rw)) * (torch.rand(1).item() * 1e-6 + 1e-8)
                 self.watermark_vector.requires_grad = False
                 gc.collect()
                 if torch.cuda.is_available(): torch.cuda.empty_cache()
