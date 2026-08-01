@@ -4,6 +4,9 @@ from typing import Optional
 logger = logging.getLogger('astra_guard')
 logging.basicConfig(level=logging.INFO)
 
+class AstraSecurityException(Exception):
+    pass
+
 class VORTEXSVDEngine:
     def __init__(self, rank_k: int = 64, enable_basis_hopping: bool = True, enable_watermark: bool = True, preallocate_buffers: bool = False):
         self.rank_k = rank_k
@@ -18,6 +21,12 @@ class VORTEXSVDEngine:
             try:
                 x_clean = torch.nan_to_num(baseline_activations, nan=0.0, posinf=1e4, neginf=-1e4)
                 x_flat = self._unroll_to_2d(x_clean)
+
+                # Downsample/crop to prevent DoS via $O(N^3)$ lockups
+                if x_flat.shape[0] > 2048:
+                    x_flat = x_flat[:2048, :]
+                if x_flat.shape[1] > 2048:
+                    x_flat = x_flat[:, :2048]
 
                 # Zero-variance check and mitigation
                 var = torch.var(x_flat, dim=0, unbiased=False)
@@ -48,16 +57,28 @@ class VORTEXSVDEngine:
                 logger.info(f'[VORTEX-SVD] Subspace Locked Successfully. Rank K={k}')
                 return True
             except Exception as e:
-                logger.error(f'SVD Error: {e}')
-                return False
+                raise AstraSecurityException('Processing Failed') from None
 
     def deflect_activations(self, x: torch.Tensor) -> torch.Tensor:
         if self.P_parallel is None: return x
-        orig_shape, orig_dtype, target_dev = x.shape, x.dtype, x.device
+        try:
+            orig_shape, orig_dtype, target_dev = x.shape, x.dtype, x.device
+        except Exception:
+            raise AstraSecurityException('Processing Failed') from None
         with torch.no_grad():
             try:
                 x_san = torch.nan_to_num(x, nan=0.0, posinf=1e4, neginf=-1e4)
                 x_flat = self._unroll_to_2d(x_san)
+
+                # We need to make sure we don't multiply x_f64 with P_f64 if P_f64 is smaller than x_f64.
+                # Actually for deflect, since we must return orig_shape,
+                # if we crop x_flat for the matmul, we must pad it back or we can't restore shape.
+                # Since P_parallel is size k x k or channels x channels, it is calibrated to the cropped channels.
+                # If during deflect the channels exceed what P_parallel was calibrated on, we slice P_parallel or crop x_flat.
+                # To be safe and just prevent DoS lockup on the math:
+                if x_flat.shape[1] > self.P_parallel.shape[0]:
+                    x_flat = x_flat[:, :self.P_parallel.shape[0]]
+
                 x_f64 = x_flat.to(dtype=torch.float64, device=target_dev)
                 P_f64 = self.P_parallel.to(dtype=torch.float64, device=target_dev)
                 if self.enable_basis_hopping and self.V_k is not None:
@@ -68,11 +89,17 @@ class VORTEXSVDEngine:
                     P_f64 = torch.matmul(V_h, V_h.T)
                 deflected_f64 = torch.matmul(x_f64, P_f64)
                 if self.enable_watermark and self.watermark_vector is not None:
-                    deflected_f64 = deflected_f64 + self.watermark_vector.to(device=target_dev)
+                    deflected_f64 = deflected_f64 + self.watermark_vector[:deflected_f64.shape[1]].to(device=target_dev)
                 deflected = deflected_f64.to(dtype=orig_dtype)
+
+                # If we cropped features earlier, we pad them back with 0s to restore shape
+                if deflected.shape[1] < self._unroll_to_2d(x).shape[1]:
+                    pad_size = self._unroll_to_2d(x).shape[1] - deflected.shape[1]
+                    deflected = torch.cat([deflected, torch.zeros(deflected.shape[0], pad_size, dtype=orig_dtype, device=target_dev)], dim=1)
+
                 return self._restore_shape(deflected, orig_shape)
             except Exception:
-                return x
+                raise AstraSecurityException('Processing Failed') from None
 
     def _unroll_to_2d(self, x: torch.Tensor) -> torch.Tensor:
         x = x.contiguous()

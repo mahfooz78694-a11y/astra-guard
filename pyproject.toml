@@ -9,7 +9,7 @@ authors = [{ name = "MD Mahfooz & Alsaad Alam", email = "mahfooz78694@gmail.com"
 description = "VORTEX-SVD Engine v2.0: Zero-Retraining AI Activation Security Framework"
 readme = "README.md"
 requires-python = ">=3.9"
-dependencies = ["torch>=2.0.0", "numpy>=1.22.0"]
+dependencies = ["torch==2.0.1", "numpy==1.24.3"]
 
 [project.urls]
 Homepage = "https://github.com/mahfooz78694-a11y/astra-guard"

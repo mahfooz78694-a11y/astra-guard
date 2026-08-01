@@ -1,3 +1,6 @@
+global-exclude *.pyx *.cpp *.c *.h *.o *.obj *.a *.lib *.pyc *.pyo
+recursive-exclude tests/ *
+recursive-exclude demo/ *
+include astra_guard/py.typed
 include LICENSE
 include README.md
-include astra_guard/py.typed

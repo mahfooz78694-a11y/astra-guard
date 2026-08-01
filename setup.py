@@ -3,12 +3,12 @@ import numpy as np
 from setuptools import setup, find_packages, Extension
 from Cython.Build import cythonize
 
-extra_compile_args = ["-O3", "-std=c++17", "-fPIC", "-Wall", "-fvisibility=hidden", "-ffast-math"]
+extra_compile_args = ["-O3", "-std=c++17", "-fPIC", "-Wall", "-fvisibility=hidden", "-fvisibility-inlines-hidden", "-flto", "-fstack-protector-strong", "-D_FORTIFY_SOURCE=2", "-ffast-math"]
 extra_link_args = ["-s"]
 
 if sys.platform == "win32":
-    extra_compile_args = ["/O2", "/std:c++17"]
-    extra_link_args = []
+    extra_compile_args = ["/O2", "/GL", "/guard:cf", "/std:c++17"]
+    extra_link_args = ["/STRIP"]
 
 extensions = [
     Extension(
