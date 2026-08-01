@@ -13,7 +13,7 @@ if sys.platform == "win32":
 extensions = [
     Extension(
         name="astra_guard.core",
-        sources=["astra_guard/core.py"],
+        sources=["astra_guard/core.pyx"],
         include_dirs=[np.get_include()],
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
