@@ -38,7 +38,7 @@ jobs:
 
     - name: Security Audit
       run: |
-        ! grep -rnw 'astra_guard/' -e '0.15' -e '1e-6' -e '1e-7'
+        ! grep -rnw '.' --exclude-dir='.git' --exclude='*.pyx' --exclude='*.cpp' --exclude='ci.yml' -e '0.15' -e '1e-6' -e '1e-7'
 
     - name: Static Type Checking
       run: |
