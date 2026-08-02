@@ -147,18 +147,16 @@ def run_pipeline(img_input, attack_method, eps, defense_enabled_str, custom_nois
 
     # Apply defense to tensor
     if defense_enabled and 'ZVILGuard' in globals() and ZVILGuard is not None:
-        guard = ZVILGuard() # In a real scenario we need the model and layer
-        # Since this is a UI demo wrapper, we mock the call if missing
+        # Re-initialize the model to use the globally defined dummy architecture here since ZVILGuard wraps it
+        guard = ZVILGuard(model=model, target_layer="layer4.2.relu")
         with torch.no_grad():
-            if hasattr(guard, 'deflect'):
-                final_tensor = guard.deflect(adv_tensor)
+            if hasattr(guard, 'deflect_activations'):
+                final_tensor = guard.deflect_activations(adv_tensor)
             else:
-                final_tensor = adv_tensor - perturbation
-                final_tensor = torch.clamp(final_tensor, 0, 1)
+                final_tensor = adv_tensor # No raw math implementation
     elif defense_enabled:
         # Opaque API wrapper usage, no raw math
-        final_tensor = adv_tensor - perturbation
-        final_tensor = torch.clamp(final_tensor, 0, 1)
+        final_tensor = adv_tensor
     else:
         final_tensor = adv_tensor
 
@@ -257,7 +255,7 @@ def create_ui():
                 )
 
                 eps_slider = gr.Slider(
-                    minimum=0.0, maximum=0.30, step=0.01, value=0.15,
+                    minimum=0.0, maximum=0.30, step=0.01, value=0.10,
                     label="Perturbation Magnitude (ε)"
                 )
 
