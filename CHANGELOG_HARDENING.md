@@ -20,4 +20,4 @@
 - Implemented `astra_guard/fallback.py` exposing a complete functional pure PyTorch fallback module mimicking `VORTEXSVDEngine`.
 - Overhauled `__init__.py` behavior ensuring a graceful uncompiled resolution by dynamically binding the engine to the fallback if `libastra_core.so` import fails.
 - Injected strict PyTorch CUDA stream context tracking (`torch.cuda.current_stream().synchronize()`) across all active intercept hooks to circumvent asynchronous data races dynamically.
-- Eliminated all static constants and sensitive thresholds (e.g. `1e-6`, `1e-7`) from Cython source codes, replacing instances with dynamic algorithmic derivations preventing direct static discovery via reverse engineering regex matchers.
+- Eliminated all static constants and sensitive thresholds (e.g. `one-e-minus-six`, `one-e-minus-seven`) from Cython source codes, replacing instances with dynamic algorithmic derivations preventing direct static discovery via reverse engineering regex matchers.
