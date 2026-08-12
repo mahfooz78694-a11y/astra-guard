@@ -8,7 +8,7 @@ import logging
 import torch
 import torch.nn as nn
 from typing import Optional, Any, Union, Tuple
-from astra_guard.core import VORTEXSVDEngine
+from astra_guard import VORTEXSVDEngine
 
 logger = logging.getLogger("astra_guard")
 
@@ -104,10 +104,16 @@ class ZVILGuard:
             main_tensor = output_tensor[0]
             if isinstance(main_tensor, torch.Tensor):
                 deflected = self.engine.deflect_activations(main_tensor)
-                return (deflected, *output_tensor[1:])
+                result = (deflected, *output_tensor[1:])
+                if torch.cuda.is_available() and getattr(deflected, 'is_cuda', False):
+                    torch.cuda.current_stream(deflected.device).synchronize()
+                return result
             return output_tensor
         elif isinstance(output_tensor, torch.Tensor):
-            return self.engine.deflect_activations(output_tensor)
+            result = self.engine.deflect_activations(output_tensor)
+            if torch.cuda.is_available() and getattr(result, 'is_cuda', False):
+                torch.cuda.current_stream(result.device).synchronize()
+            return result
         else:
             return output_tensor
 

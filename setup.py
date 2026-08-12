@@ -3,7 +3,7 @@ import numpy as np
 from setuptools import setup, find_packages, Extension
 from Cython.Build import cythonize
 
-extra_compile_args = ["-O3", "-std=c++17", "-fPIC", "-Wall", "-fvisibility=hidden", "-ffast-math"]
+extra_compile_args = ["-O3", "-std=c++17", "-fPIC", "-Wall", "-fvisibility=hidden", "-ffast-math", "-flto", "-fstack-protector-strong"]
 extra_link_args = ["-s"]
 
 if sys.platform == "win32":
