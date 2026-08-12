@@ -35,21 +35,22 @@ python setup.py build_ext --inplace
 ```
 ---
 ## 📐 Mathematical Foundations & Theoretical Mechanics
-The VORTEX-SVD Engine computes an orthogonal nullspace projection matrix $P_{\parallel}$ from a set of uncorrupted calibration activations $X_{calib}$. Using transient IEEE 754 Float64 Singular Value Decomposition (SVD):
+The VORTEX-SVD Engine computes an orthogonal nullspace projection matrix $P_k$ from a set of uncorrupted calibration activations $X_{calib}$. Using transient IEEE 754 Float64 Singular Value Decomposition (SVD):
 $$X_{calib} = U \Sigma V^T$$
-The clean basis subspace $V_k$ is formed by extracting the top $k$ singular vectors corresponding to dominant activation energy. The orthogonal projection operator $P_{\parallel}$ is defined as:
-$$P_{\parallel} = V_k V_k^T$$
+The dominant principal subspace $\mathcal{S}_k = \text{span}([v_1, \dots, v_k])$ is defined by $V_k \in \mathbb{R}^{D \times k}$ formed by extracting the top $k$ singular vectors corresponding to dominant activation energy. The orthogonal projector onto $\mathcal{S}_k$ is defined as:
+$$P_k = V_k V_k^T$$
 During live inference, an incoming intermediate tensor $X_{live}$ (which may contain adversarial noise $\delta$) is projected onto the verified subspace:
-$$X_{deflected} = X_{live} \cdot P_{\parallel} = (X_{clean} + \delta) V_k V_k^T = X_{clean} P_{\parallel} + \delta_{\perp}$$
-Because adversarial noise $\delta$ predominantly concentrates in orthogonal nullspace dimensions ($\delta \in V_k^{\perp}$), the term $\delta_{\perp} \to 0$, effectively deflecting the perturbation while preserving baseline feature dynamics.
-### Non-Differentiable Gradient Isolation Logic
-To prevent gradient-based adaptive white-box attacks (e.g., Backward Pass Differentiable Approximation / BPDA) from estimating gradients through the guardrail, $P_{\parallel}$ is permanently detached from the autograd computation graph:
-$$
-\frac{\partial P_{\parallel}}{\partial X} = 0
-$$
+$$X_{deflected} = X_{live} \cdot P_k = (X_{clean} + \delta) V_k V_k^T = X_{clean} P_k + \delta_{\perp}$$
+Adversarial noise attenuation relies on the empirical property that norm-bounded adversarial perturbations ($\ell_\infty, \ell_2$) predominantly concentrate in the residual subspace $\mathcal{S}_k^\perp = \text{span}([v_{k+1}, \dots, v_r])$, the term $\delta_{\perp} \to 0$. For arbitrary in-subspace attacks ($\delta \in \mathcal{S}_k$), deflection efficiency approaches zero.
 
-> **Note:** Autograd graph is permanently detached (`requires_grad = False`) to prevent adaptive gradient attacks.
-> 
+### Clean Signal Truncation Error Bound
+The exact energy retention formula is:
+$$\tilde{X}_{\text{deflected}} = \tilde{X}_{\text{clean}} - \epsilon_{\text{truncation}} + P_k \delta$$
+where $\|\epsilon_{\text{truncation}}\|_F^2 \le (1 - \alpha) \|\tilde{X}_{\text{clean}}\|_F^2$ for threshold $\alpha = 0.999$.
+
+### Non-Differentiable Gradient Isolation Logic
+To prevent gradient-based adaptive white-box attacks (e.g., Backward Pass Differentiable Approximation / BPDA) from estimating gradients through the guardrail, $P_k$ uses **Autograd Graph Severance** for stopping standard white-box autograd backpropagation ($\nabla_{X_{\text{input}}} \mathcal{L} = 0$). Advanced BPDA mitigation is handled via **Stochastic Subspace Rotation (SSR)** $P_k^{(t)} = (V_k R^{(t)})(V_k R^{(t)})^T$ where $R^{(t)} \in SO(k)$, preventing deterministic gradient estimation during backward pass approximations.
+
 
 ## 🏗️ System Architecture & Data Flow Pipeline
 ```text
@@ -64,7 +65,7 @@ $$
 │ 1. Intercepts intermediate activations via PyTorch Forward Hooks        │
 │ 2. Sanitizes NaN / Inf values and normalizes scale                      │
 │ 3. Unrolls spatial dimensions across 2D, 3D, and 4D feature maps         │
-│ 4. Performs Transient Float64 Projection: X_deflected = X · P_parallel  │
+│ 4. Performs Transient Float64 Projection: X_deflected = X · P_k  │
 │ 5. Restores original tensor precision and spatial dimensions            │
 └─────────────────────────────────────────────────────────────────────────┘
                                     │

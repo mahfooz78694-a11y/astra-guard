@@ -3,3 +3,5 @@ include README.md
 include astra_guard/py.typed
 exclude astra_guard/*.pyx
 exclude astra_guard/*.cpp
+
+include astra_guard/native_crypto.hpp
