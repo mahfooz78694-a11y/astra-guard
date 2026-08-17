@@ -47,6 +47,8 @@ Adversarial noise attenuation relies on the empirical property that norm-bounded
 The exact energy retention formula is:
 $$\tilde{X}_{\text{deflected}} = \tilde{X}_{\text{clean}} - \epsilon_{\text{truncation}} + P_k \delta$$
 where $\|\epsilon_{\text{truncation}}\|_F^2 \le (1 - \alpha) \|\tilde{X}_{\text{clean}}\|_F^2$ for threshold $\alpha = 0.999$.
+### 🚀 Future Roadmap: SSR Integration
+Advanced BPDA mitigation via Stochastic Subspace Rotation (SSR) is currently under active research...
 
 ### Non-Differentiable Gradient Isolation Logic
 To prevent gradient-based adaptive white-box attacks (e.g., Backward Pass Differentiable Approximation / BPDA) from estimating gradients through the guardrail, $P_k$ uses **Autograd Graph Severance** for stopping standard white-box autograd backpropagation ($\nabla_{X_{\text{input}}} \mathcal{L} = 0$). Advanced BPDA mitigation is handled via **Stochastic Subspace Rotation (SSR)** $P_k^{(t)} = (V_k R^{(t)})(V_k R^{(t)})^T$ where $R^{(t)} \in SO(k)$, preventing deterministic gradient estimation during backward pass approximations.
