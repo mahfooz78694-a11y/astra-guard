@@ -2,6 +2,7 @@ import pytest
 import torch
 from astra_guard.core import VORTEXSVDEngine
 
+
 def test_gradient_freezing():
     engine = VORTEXSVDEngine(rank_k=4)
     acts = torch.randn(10, 16)

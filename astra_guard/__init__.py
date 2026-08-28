@@ -2,6 +2,7 @@ try:
     from astra_guard.core import VORTEXSVDEngine
 except ImportError:
     import logging
+
     logger = logging.getLogger("astra_guard")
     logger.warning("astra_guard.core not compiled. Falling back to pure Python implementation.")
     from astra_guard.fallback import VORTEXSVDEngine
@@ -16,7 +17,7 @@ __all__ = [
     "ZVILGuard",
     "AutoSubspaceTuner",
     "export_protected_onnx",
-    "start_telemetry_server"
+    "start_telemetry_server",
 ]
 
 __version__ = "2.0.0"

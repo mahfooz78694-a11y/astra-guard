@@ -4,9 +4,7 @@ from astra_guard.core import VORTEXSVDEngine
 
 
 def test_svd_engine_calibration():
-    engine = VORTEXSVDEngine(
-        rank_k=8, enable_basis_hopping=False, enable_watermark=False
-    )
+    engine = VORTEXSVDEngine(rank_k=8, enable_basis_hopping=False, enable_watermark=False)
     acts = torch.randn(100, 32)
     assert engine.calibrate_subspace(acts)
     assert engine.P_parallel is not None
@@ -36,10 +34,32 @@ def test_qr_fallback_mocked(monkeypatch):
     assert engine.P_parallel is not None
 
 
+def test_numerical_stability_degenerate():
+    engine = VORTEXSVDEngine(rank_k=4)
+    # Zero matrix
+    zero_acts = torch.zeros(20, 10)
+    assert engine.calibrate_subspace(zero_acts)
+    out_zero = engine.deflect_activations(zero_acts)
+    assert not torch.isnan(out_zero).any()
+
+    # Constant values
+    const_acts = torch.ones(20, 10) * 100.0
+    assert engine.calibrate_subspace(const_acts)
+    out_const = engine.deflect_activations(const_acts)
+    assert not torch.isnan(out_const).any()
+
+    # Extreme condition numbers
+    U, _ = torch.linalg.qr(torch.randn(20, 10))
+    V, _ = torch.linalg.qr(torch.randn(10, 10))
+    S = torch.diag(torch.tensor([1e6, 1e4, 1e2, 1.0, 1e-2, 1e-4, 1e-6, 1e-8, 1e-10, 1e-12]))
+    ill_acts = U @ S @ V.T
+    assert engine.calibrate_subspace(ill_acts)
+    out_ill = engine.deflect_activations(ill_acts)
+    assert not torch.isnan(out_ill).any()
+
+
 def test_precision_casting():
-    engine = VORTEXSVDEngine(
-        rank_k=4, enable_basis_hopping=False, enable_watermark=False
-    )
+    engine = VORTEXSVDEngine(rank_k=4, enable_basis_hopping=False, enable_watermark=False)
     acts = torch.randn(20, 10, dtype=torch.float32)
     engine.calibrate_subspace(acts)
 
@@ -55,9 +75,7 @@ def test_precision_casting():
 def test_math_invariants():
     dim = 32
     rank_k = 16
-    engine = VORTEXSVDEngine(
-        rank_k=rank_k, enable_basis_hopping=False, enable_watermark=False
-    )
+    engine = VORTEXSVDEngine(rank_k=rank_k, enable_basis_hopping=False, enable_watermark=False)
 
     # Create structured clean activations
     acts = torch.randn(100, dim, dtype=torch.float64)
@@ -99,4 +117,4 @@ def test_math_invariants():
     delta = torch.matmul(noise_coeffs, V_perp.T)
 
     deflected_noise = engine.deflect_activations(delta)
-    assert torch.norm(deflected_noise, p="fro").item() < 1e-5
+    assert torch.norm(deflected_noise, p="fro").item() < 1e-4

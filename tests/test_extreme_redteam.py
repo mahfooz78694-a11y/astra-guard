@@ -8,8 +8,9 @@ import subprocess
 import torch.nn as nn
 from glob import glob
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from astra_guard import ZVILGuard, AutoSubspaceTuner
+
 
 class DummyModel(nn.Module):
     def __init__(self):
@@ -19,12 +20,13 @@ class DummyModel(nn.Module):
     def forward(self, x):
         return self.layer(x)
 
+
 def test_vector1_binary_inspection():
     """
     1. Binary Inspection: Verify via automated assertions that compiled dynamic binaries (.so/.pyd)
     do not expose raw Cython/C++ source code or unstripped internal math symbols.
     """
-    package_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'astra_guard'))
+    package_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "astra_guard"))
     binaries = glob(os.path.join(package_dir, "*.so")) + glob(os.path.join(package_dir, "*.pyd"))
 
     assert len(binaries) > 0, "No compiled binaries found in astra_guard directory."
@@ -34,10 +36,10 @@ def test_vector1_binary_inspection():
             result = subprocess.run(["strings", binary], capture_output=True, text=True)
             assert result.returncode == 0, f"Failed to run strings on {binary}"
 
-            lines = result.stdout.split('\n')
+            lines = result.stdout.split("\n")
 
-            has_pyx_logic = any('.pyx' in line and '=' in line for line in lines if not line.startswith('/'))
-            has_cpp_logic = any('.cpp' in line and '=' in line for line in lines if not line.startswith('/'))
+            has_pyx_logic = any(".pyx" in line and "=" in line for line in lines if not line.startswith("/"))
+            has_cpp_logic = any(".cpp" in line and "=" in line for line in lines if not line.startswith("/"))
 
             assert not has_pyx_logic, f"Found raw Cython (.pyx) source logic in {binary}"
             assert not has_cpp_logic, f"Found raw C++ (.cpp) source logic in {binary}"
@@ -58,20 +60,21 @@ def test_vector1_binary_inspection():
             # strings command is not available, skip test
             pass
 
+
 def test_vector2_adversarial_robustness():
     """
     2. Adversarial Robustness: Stress-test 'ZVILGuard' against BPDA gradient manipulation,
     NaN/Inf tensor poisoning, and zero-variance matrices. Assert that the defense never throws uncaught C++ panics.
     """
     model = DummyModel()
-    guard = ZVILGuard(model, 'layer', rank_k=4)
+    guard = ZVILGuard(model, "layer", rank_k=4)
     guard.attach()
 
     # 1. NaN/Inf poisoning
     poisoned_input = torch.randn(4, 3, 8, 8)
-    poisoned_input[0, 0, 0, 0] = float('nan')
-    poisoned_input[0, 0, 0, 1] = float('inf')
-    poisoned_input[0, 0, 0, 2] = float('-inf')
+    poisoned_input[0, 0, 0, 0] = float("nan")
+    poisoned_input[0, 0, 0, 1] = float("inf")
+    poisoned_input[0, 0, 0, 2] = float("-inf")
 
     # Should not throw any exception or panic
     try:
@@ -82,7 +85,7 @@ def test_vector2_adversarial_robustness():
     # Forward pass with poisoned
     try:
         out = guard.engine.deflect_activations(poisoned_input)
-        assert not torch.isnan(out).any() or True # As long as it didn't crash
+        assert not torch.isnan(out).any() or True  # As long as it didn't crash
     except Exception:
         pass
 
@@ -107,7 +110,7 @@ def test_vector3_memory_concurrency_leak():
     on dynamic tensor shapes (up to 2048x2048) and verify zero memory growth or CUDA memory leakage.
     """
     model = DummyModel()
-    guard = ZVILGuard(model, 'layer', rank_k=2)
+    guard = ZVILGuard(model, "layer", rank_k=2)
     guard.engine.calibrate_subspace(torch.randn(1, 1, 16, 16))
 
     process = psutil.Process(os.getpid())
@@ -130,7 +133,7 @@ def test_vector3_memory_concurrency_leak():
         else:
             h, w = 16, 16
 
-        x = torch.randn(1, 1, h, w) # 1 channel to speed it up
+        x = torch.randn(1, 1, h, w)  # 1 channel to speed it up
         _ = guard.engine.deflect_activations(x)
 
     gc.collect()
@@ -148,13 +151,14 @@ def test_vector3_memory_concurrency_leak():
         cuda_growth_mb = (final_cuda_mem - initial_cuda_mem) / (1024 * 1024)
         assert cuda_growth_mb < 50, f"CUDA memory leak detected: grew by {cuda_growth_mb:.2f} MB"
 
+
 def test_vector4_developer_safeguards():
     """
     4. Developer Safeguards: Ensure all boundary errors gracefully fall back
     to the safe tensor state without crashing the parent application.
     """
     model = DummyModel()
-    guard = ZVILGuard(model, 'layer', rank_k=4)
+    guard = ZVILGuard(model, "layer", rank_k=4)
 
     # Passing an unsupported type
     unsupported_input = "this is a string, not a tensor"
