@@ -129,7 +129,7 @@ class VORTEXSVDEngine:
                     deflected_f64.add_(self.watermark_vector.to(device=target_dev))
 
                 # To prevent data wiping when orig_dtype is float64, we MUST enforce copy if we are about to zero deflected_f64.
-                deflected = deflected_f64.to(dtype=orig_dtype, copy=True)
+                deflected = deflected_f64.to(dtype=orig_dtype, device=target_dev, copy=True)
 
                 # Secure sanitize temporary buffers natively
                 if target_dev.type == 'cpu':
@@ -141,7 +141,7 @@ class VORTEXSVDEngine:
                     P_f64.zero_()
                     deflected_f64.zero_()
 
-                return self._restore_shape(deflected, orig_shape)
+                return self._restore_shape(deflected, orig_shape).detach().requires_grad_(False)
             except Exception:
                 return x
 

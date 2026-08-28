@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from astra_guard.hooks import ZVILGuard
 
+
 class DummyModel(nn.Module):
     def __init__(self):
         super().__init__()
@@ -14,9 +15,10 @@ class DummyModel(nn.Module):
         x = self.fc2(x)
         return x
 
+
 def test_hook_attach_detach():
     model = DummyModel()
-    guard = ZVILGuard(model, target_layer='fc1', rank_k=4)
+    guard = ZVILGuard(model, target_layer="fc1", rank_k=4)
 
     assert not guard.is_attached
     assert guard.hook_handle is None
@@ -29,9 +31,10 @@ def test_hook_attach_detach():
     guard.detach()
     assert not guard.is_attached
 
+
 def test_hook_interception():
     model = DummyModel()
-    guard = ZVILGuard(model, target_layer='fc1', rank_k=4)
+    guard = ZVILGuard(model, target_layer="fc1", rank_k=4)
 
     # dummy calibration
     dataloader = [(torch.randn(2, 10),) for _ in range(3)]

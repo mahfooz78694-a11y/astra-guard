@@ -102,11 +102,13 @@ Evaluated on batch size $B=32$ across standard deep learning acceleration platfo
 ## 🛡️ Real-World Adversarial Battle Performance
 Empirical battle results evaluating `astra-guard` on deep vision models subjected to standard adversarial attack vectors:
 
-| Attack Vector | Unprotected Model Accuracy | Clean Accuracy Degradation | Adversarial Distortion Attenuation Ratio (MSE reduction %) | Latency Overhead |
+| Attack Vector | Unprotected Model Accuracy | Clean Accuracy Degradation | Adversarial Distortion Attenuation Ratio (MSE reduction %) | Attack Generation + Forward Pass Latency (ms) |
 | :--- | :--- | :--- | :--- | :--- |
 | **FGSM Attack ($\epsilon=0.45$)** | 0.6% | <0.5% | 95.4% | 50.677 ms |
 | **PGD-10 Iterative Attack** | 52.4% | <0.5% | 88.6% | 94.162 ms |
 | **Heavy Activation Noise ($\sigma=2.2$)** | 100.0% | <0.5% | 98.2% | 35.684 ms |
+
+* Note: Table 2 latency reflects end-to-end multi-step gradient attack generation (e.g., 10-step PGD backward loops), whereas Table 1 isolates pure VORTEX-SVD middleware interception and projection overhead (< 0.08 ms).
 
 ---
 ## 💻 Quickstart Integration Examples

@@ -3,6 +3,7 @@ import torch.nn as nn
 from astra_guard.core import VORTEXSVDEngine
 from astra_guard.hooks import ZVILGuard
 
+
 def test_extreme_dynamic_batches():
     engine = VORTEXSVDEngine(rank_k=2)
 
@@ -28,6 +29,7 @@ def test_extreme_dynamic_batches():
         out4d = engine.deflect_activations(t4d)
         assert out4d.shape == t4d.shape
 
+
 def test_singular_value_degeneracy():
     engine = VORTEXSVDEngine(rank_k=2)
 
@@ -38,7 +40,7 @@ def test_singular_value_degeneracy():
     assert not torch.isnan(out_zero).any()
 
     # Inf/NaN tensors
-    inf_t = torch.tensor([[float('inf'), float('-inf'), float('nan'), 0.0] for _ in range(10)])
+    inf_t = torch.tensor([[float("inf"), float("-inf"), float("nan"), 0.0] for _ in range(10)])
     assert engine.calibrate_subspace(inf_t)
     out_inf = engine.deflect_activations(inf_t)
     assert not torch.isnan(out_inf).any()
@@ -48,6 +50,7 @@ def test_singular_value_degeneracy():
     assert engine.calibrate_subspace(id_t)
     out_id = engine.deflect_activations(id_t)
     assert not torch.isnan(out_id).any()
+
 
 def test_autograd_immunity():
     class DummyModel(nn.Module):
@@ -59,7 +62,7 @@ def test_autograd_immunity():
             return self.linear(x)
 
     model = DummyModel()
-    guard = ZVILGuard(model, target_layer='linear', rank_k=2)
+    guard = ZVILGuard(model, target_layer="linear", rank_k=2)
 
     # Calibrate
     class DummyDataLoader:
@@ -89,7 +92,7 @@ def test_autograd_immunity():
             return x
 
     model2 = TestModel()
-    guard2 = ZVILGuard(model2, target_layer='linear1', rank_k=2)
+    guard2 = ZVILGuard(model2, target_layer="linear1", rank_k=2)
     guard2.calibrate(DummyDataLoader(), num_batches=1)
     guard2.attach()
 

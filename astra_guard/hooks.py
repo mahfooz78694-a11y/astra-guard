@@ -12,12 +12,14 @@ from astra_guard import VORTEXSVDEngine
 
 logger = logging.getLogger("astra_guard")
 
+
 class ZVILGuard:
     """
     2-Line Integration Guardrail Wrapper for PyTorch Models.
     Attaches non-invasive forward hooks to protect activations in real-time.
     Supports CNNs, Linear layers, and Transformer Tuple outputs.
     """
+
     def __init__(
         self,
         model: nn.Module,
@@ -26,7 +28,7 @@ class ZVILGuard:
         enable_basis_hopping: bool = True,
         enable_watermark: bool = True,
         preallocate_buffers: bool = False,
-        vram_threshold_mb: int = 1000
+        vram_threshold_mb: int = 1000,
     ):
         self.model = model
         self.target_layer_name = target_layer
@@ -35,7 +37,7 @@ class ZVILGuard:
             rank_k=rank_k,
             enable_basis_hopping=enable_basis_hopping,
             enable_watermark=enable_watermark,
-            preallocate_buffers=preallocate_buffers
+            preallocate_buffers=preallocate_buffers,
         )
         self.hook_handle: Optional[torch.utils.hooks.RemovableHandle] = None
         self.is_attached = False
@@ -52,7 +54,7 @@ class ZVILGuard:
         logger.info(f"[ASTRA] Calibrating VORTEX-SVD Subspace on layer: {self.target_layer_name}...")
         self.model.eval()
         captured_activations = []
-        
+
         def temp_collector(module, input_t, output_t):
             act = output_t[0] if isinstance(output_t, (tuple, list)) else output_t
             if isinstance(act, torch.Tensor):
@@ -61,7 +63,8 @@ class ZVILGuard:
         handle = self.target_module.register_forward_hook(temp_collector)
         with torch.no_grad():
             for i, batch in enumerate(dataloader):
-                if i >= num_batches: break
+                if i >= num_batches:
+                    break
                 inputs = batch[0] if isinstance(batch, (list, tuple)) else batch
                 if torch.cuda.is_available() and isinstance(inputs, torch.Tensor):
                     inputs = inputs.cuda()
@@ -70,7 +73,7 @@ class ZVILGuard:
 
         if not captured_activations:
             raise RuntimeError("[ASTRA-ERROR] No activation samples captured during calibration.")
-        
+
         combined_acts = torch.cat(captured_activations, dim=0)
         success = self.engine.calibrate_subspace(combined_acts)
         if not success:
@@ -88,15 +91,18 @@ class ZVILGuard:
                         logger.warning(f"[ASTRA CIRCUIT-BREAKER] Low VRAM ({free_mb:.1f}MB). Switched to Safe Pass-Through Mode.")
                         self.circuit_breaker_tripped = True
                     return True
-            except Exception:
-                pass
+            except (RuntimeError, Exception) as e:
+                if not self.circuit_breaker_tripped:
+                    logger.warning(f"[ASTRA CIRCUIT-BREAKER] Exception getting VRAM info ({e}). Switched to Safe Pass-Through Mode.")
+                    self.circuit_breaker_tripped = True
+                return True
         self.circuit_breaker_tripped = False
         return False
 
     def _forward_hook(self, module: nn.Module, input_tensor: Any, output_tensor: Any) -> Any:
         if self._check_circuit_breaker():
             return output_tensor
-        
+
         # Handle HuggingFace / Transformer Tuple Outputs safely
         if isinstance(output_tensor, tuple):
             if len(output_tensor) == 0:
@@ -105,13 +111,13 @@ class ZVILGuard:
             if isinstance(main_tensor, torch.Tensor):
                 deflected = self.engine.deflect_activations(main_tensor)
                 result = (deflected, *output_tensor[1:])
-                if torch.cuda.is_available() and getattr(deflected, 'is_cuda', False):
+                if torch.cuda.is_available() and getattr(deflected, "is_cuda", False):
                     torch.cuda.current_stream(deflected.device).synchronize()
                 return result
             return output_tensor
         elif isinstance(output_tensor, torch.Tensor):
             result = self.engine.deflect_activations(output_tensor)
-            if torch.cuda.is_available() and getattr(result, 'is_cuda', False):
+            if torch.cuda.is_available() and getattr(result, "is_cuda", False):
                 torch.cuda.current_stream(result.device).synchronize()
             return result
         else:
