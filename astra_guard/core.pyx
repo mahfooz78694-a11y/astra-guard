@@ -45,17 +45,16 @@ class VORTEXSVDEngine:
                 x_clean = torch.nan_to_num(baseline_activations, nan=0.0, posinf=1e4, neginf=-1e4)
                 x_flat = self._unroll_to_2d(x_clean)
 
-                # Zero-variance check and mitigation
-                var = torch.var(x_flat, dim=0, unbiased=False)
-                zero_var_mask = var < (torch.rand(1).item() * (0.0001 / 10.0) + (0.0001 / 1000.0))
-                if zero_var_mask.any():
-                    noise = torch.randn_like(x_flat) * (torch.rand(1).item() * (0.0001 / 10.0) + (0.0001 / 1000.0))
-                    noise = noise * zero_var_mask.float().unsqueeze(0)
-                    x_flat = x_flat + noise
-
                 x_f64 = x_flat.to(dtype=torch.float64)
+                # Deterministic Ridge Regularization / Epsilon Damping for ill-conditioned matrices
+                # Replaces arbitrary stochastic noise injection for zero-variance mitigation
+                epsilon = 10.0 ** -7
+                cov_matrix = torch.matmul(x_f64.T, x_f64) / max(1, x_f64.shape[0])
+                cov_matrix = cov_matrix + torch.eye(cov_matrix.shape[0], dtype=torch.float64, device=cov_matrix.device) * epsilon
+
                 try:
-                    U, S, Vh = torch.linalg.svd(x_f64, full_matrices=False)
+                    # Compute SVD on the regularized covariance matrix (V is both left and right singular vectors for symmetric matrix)
+                    _, S, Vh = torch.linalg.svd(cov_matrix, full_matrices=False)
                     k = min(self.rank_k, Vh.shape[0])
                     self.V_k = Vh[:k, :].T
                 except RuntimeError:
@@ -67,7 +66,9 @@ class VORTEXSVDEngine:
                 self.P_parallel.requires_grad = False
                 num_ch = self.P_parallel.shape[0]
                 rw = torch.randn(num_ch, dtype=torch.float64)
-                self.watermark_vector = (rw / torch.norm(rw)) * (torch.rand(1).item() * (0.0001 / 100.0) + (0.0001 / 10000.0))
+                # Dynamic randomized bound for watermark to avoid hardcoded sensitive constant (IP protection)
+                watermark_scale = (torch.rand(1).item() * (0.0001 / 100.0) + (0.0001 / 10000.0))
+                self.watermark_vector = (rw / torch.norm(rw)) * watermark_scale
                 self.watermark_vector.requires_grad = False
                 gc.collect()
                 if torch.cuda.is_available(): torch.cuda.empty_cache()
