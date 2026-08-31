@@ -3,7 +3,16 @@ import numpy as np
 from setuptools import setup, find_packages, Extension
 from Cython.Build import cythonize
 
-extra_compile_args = ["-O3", "-std=c++17", "-fPIC", "-Wall", "-fvisibility=hidden", "-ffast-math", "-flto", "-fstack-protector-strong"]
+extra_compile_args = [
+    "-O3",
+    "-std=c++17",
+    "-fPIC",
+    "-Wall",
+    "-fvisibility=hidden",
+    "-ffast-math",
+    "-flto",
+    "-fstack-protector-strong",
+]
 extra_link_args = ["-s"]
 
 if sys.platform == "win32":
@@ -17,7 +26,7 @@ extensions = [
         include_dirs=[np.get_include()],
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
-        language="c++"
+        language="c++",
     )
 ]
 
@@ -25,7 +34,7 @@ setup(
     name="astra-guard",
     version="2.0.0",
     packages=find_packages(),
-    ext_modules=cythonize(extensions, compiler_directives={'language_level': "3"}),
+    ext_modules=cythonize(extensions, compiler_directives={"language_level": "3"}),
     include_package_data=True,
     zip_safe=False,
 )

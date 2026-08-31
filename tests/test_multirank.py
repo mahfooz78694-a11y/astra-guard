@@ -37,7 +37,9 @@ def test_multirank_4d():
 def test_unroll_restore_non_contiguous():
     engine = VORTEXSVDEngine(rank_k=2)
     # create non-contiguous tensor
-    acts = torch.randn(10, 32, 16, 16).transpose(1, 2)  # shape (10, 16, 32, 16) but not contiguous
+    acts = torch.randn(10, 32, 16, 16).transpose(
+        1, 2
+    )  # shape (10, 16, 32, 16) but not contiguous
     assert not acts.is_contiguous()
 
     assert engine.calibrate_subspace(acts)

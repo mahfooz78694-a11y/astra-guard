@@ -48,10 +48,14 @@ class ZVILGuard:
         modules_dict = dict(self.model.named_modules())
         if self.target_layer_name in modules_dict:
             return modules_dict[self.target_layer_name]
-        raise KeyError(f"[ASTRA-ERROR] Layer {self.target_layer_name} not found in model hierarchy.")
+        raise KeyError(
+            f"[ASTRA-ERROR] Layer {self.target_layer_name} not found in model hierarchy."
+        )
 
     def calibrate(self, dataloader: Any, num_batches: int = 5) -> "ZVILGuard":
-        logger.info(f"[ASTRA] Calibrating VORTEX-SVD Subspace on layer: {self.target_layer_name}...")
+        logger.info(
+            f"[ASTRA] Calibrating VORTEX-SVD Subspace on layer: {self.target_layer_name}..."
+        )
         self.model.eval()
         captured_activations = []
 
@@ -72,7 +76,9 @@ class ZVILGuard:
         handle.remove()
 
         if not captured_activations:
-            raise RuntimeError("[ASTRA-ERROR] No activation samples captured during calibration.")
+            raise RuntimeError(
+                "[ASTRA-ERROR] No activation samples captured during calibration."
+            )
 
         combined_acts = torch.cat(captured_activations, dim=0)
         success = self.engine.calibrate_subspace(combined_acts)
@@ -88,18 +94,24 @@ class ZVILGuard:
                 free_mb = free_mem / (1024 * 1024)
                 if free_mb < self.vram_threshold_mb:
                     if not self.circuit_breaker_tripped:
-                        logger.warning(f"[ASTRA CIRCUIT-BREAKER] Low VRAM ({free_mb:.1f}MB). Switched to Safe Pass-Through Mode.")
+                        logger.warning(
+                            f"[ASTRA CIRCUIT-BREAKER] Low VRAM ({free_mb:.1f}MB). Switched to Safe Pass-Through Mode."
+                        )
                         self.circuit_breaker_tripped = True
                     return True
             except (RuntimeError, Exception) as e:
                 if not self.circuit_breaker_tripped:
-                    logger.warning(f"[ASTRA CIRCUIT-BREAKER] Exception getting VRAM info ({e}). Switched to Safe Pass-Through Mode.")
+                    logger.warning(
+                        f"[ASTRA CIRCUIT-BREAKER] Exception getting VRAM info ({e}). Switched to Safe Pass-Through Mode."
+                    )
                     self.circuit_breaker_tripped = True
                 return True
         self.circuit_breaker_tripped = False
         return False
 
-    def _forward_hook(self, module: nn.Module, input_tensor: Any, output_tensor: Any) -> Any:
+    def _forward_hook(
+        self, module: nn.Module, input_tensor: Any, output_tensor: Any
+    ) -> Any:
         if self._check_circuit_breaker():
             return output_tensor
 
@@ -126,9 +138,13 @@ class ZVILGuard:
     def attach(self) -> None:
         """Attaches the forward hook to target module."""
         if not self.is_attached and self.target_module is not None:
-            self.hook_handle = self.target_module.register_forward_hook(self._forward_hook)
+            self.hook_handle = self.target_module.register_forward_hook(
+                self._forward_hook
+            )
             self.is_attached = True
-            logger.info(f"[ASTRA] Guardrail successfully attached to layer: {self.target_layer_name}")
+            logger.info(
+                f"[ASTRA] Guardrail successfully attached to layer: {self.target_layer_name}"
+            )
 
     def detach(self) -> None:
         """Detaches the forward hook from target module."""

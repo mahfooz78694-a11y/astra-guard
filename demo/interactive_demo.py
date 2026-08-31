@@ -1,6 +1,7 @@
 import time
 import sys
 
+
 def simulate_realtime_log():
     logs = [
         "[SYSTEM] Initializing ASTRA-GUARD Engine...",
@@ -24,7 +25,7 @@ def simulate_realtime_log():
         "[INTERCEPTOR] Overwriting forward pass with sanitized activation.",
         "[SUCCESS] Adversarial perturbation neutralized. Model confidence restored.",
         "\n--- RESUMING NORMAL OPERATION ---",
-        "[LIVE] Request ID: 004 | Tensor Shape: [32, 3, 224, 224] | Status: CLEAN"
+        "[LIVE] Request ID: 004 | Tensor Shape: [32, 3, 224, 224] | Status: CLEAN",
     ]
 
     print("\n========================================================")
@@ -44,6 +45,7 @@ def simulate_realtime_log():
             time.sleep(0.2)
 
     print("\n[SYSTEM] Demo completed successfully.\n")
+
 
 if __name__ == "__main__":
     try:
