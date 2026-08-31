@@ -1,7 +1,7 @@
 import pytest
 import torch
 import torch.nn as nn
-from astra_guard.core import VORTEXSVDEngine
+from astra_guard import VORTEXSVDEngine
 
 
 def test_multirank_2d():

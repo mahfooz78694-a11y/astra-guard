@@ -1,6 +1,6 @@
 import pytest
 import torch
-from astra_guard.core import VORTEXSVDEngine
+from astra_guard import VORTEXSVDEngine
 
 
 def test_gradient_freezing():

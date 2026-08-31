@@ -162,9 +162,28 @@ python -c "from astra_guard import ZVILGuard; print(ZVILGuard.inspect_environmen
 ```
 
 ### Multi-Modal Integration Patterns
-* **Pattern A: Large Language Model (Decoder Transformer):** Intercepting MLP projection blocks (`model.layers[i].mlp.down_proj`).
-* **Pattern B: Convolutional Vision Model:** Intercepting bottleneck layers (`layer4.2.conv3`) with dynamic 4D feature-map flattening and restoration.
-* **Pattern C: Multi-Rank Batch Processing:** Handling variable sequence lengths with dynamic masking.
+* **Pattern A: Decoder LLM (HuggingFace Transformer / MLP Interception):**
+  ```python
+  from astra_guard import ZVILGuard
+  # Intercept down-projection activation in target transformer block
+  guard = ZVILGuard(model, target_layer="model.layers.15.mlp.down_proj", rank_k=32)
+  guard.calibrate(tokenized_dataloader)
+  guard.attach()
+  ```
+* **Pattern B: Convolutional Vision Model (ResNet Bottleneck):**
+  ```python
+  from astra_guard import ZVILGuard
+  # Intercept terminal residual projection feature maps (4D tensor unrolling)
+  guard = ZVILGuard(model, target_layer="layer4.2.conv3", rank_k=16)
+  guard.calibrate(clean_val_loader)
+  guard.attach()
+  ```
+* **Pattern C: Multi-Rank Batch Processing (Variable Dimensions):**
+  ```python
+  # Seamless handling of 2D [B, C], 3D [B, S, C], and 4D [B, C, H, W] tensors
+  guard = ZVILGuard(model, target_layer=target_layer, rank_k=16)
+  guard.attach()
+  ```
 
 ### Example 1: Basic Vision Model Shielding
 ```python
@@ -244,7 +263,7 @@ If you utilize this framework or its underlying VORTEX-SVD mathematics in your a
   year         = 2026,
   publisher    = {Zenodo},
   doi          = {10.5281/zenodo.21532310},
-  url          = {[https://doi.org/10.5281/zenodo.21532310](https://doi.org/10.5281/zenodo.21532310)}
+  url          = {https://doi.org/10.5281/zenodo.21532310}
 }
 ```
 ---

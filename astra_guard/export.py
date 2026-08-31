@@ -7,7 +7,7 @@ Copyright 2026 MD Mahfooz & Alsaad Alam
 import logging
 import torch
 import torch.nn as nn
-from typing import Optional, Dict, Any
+from typing import Optional, Dict
 
 logger = logging.getLogger("astra_guard")
 
