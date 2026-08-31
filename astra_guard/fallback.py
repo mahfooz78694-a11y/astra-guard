@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
-import os, sys, gc, logging, torch
+import os
+import gc
+import logging
+import torch
 from typing import Optional
 
 logger = logging.getLogger("astra_guard")
@@ -34,6 +37,7 @@ class VORTEXSVDEngine:
         self.rank_k = rank_k
         self.enable_basis_hopping = enable_basis_hopping
         self.enable_watermark = enable_watermark
+        self.memory_threshold = float(os.environ.get("ASTRA_MEMORY_THRESHOLD", 0.90))
         self.P_parallel: Optional[torch.Tensor] = None
         self.V_k: Optional[torch.Tensor] = None
         self.watermark_vector: Optional[torch.Tensor] = None

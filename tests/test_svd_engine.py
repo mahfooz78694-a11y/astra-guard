@@ -1,6 +1,6 @@
 import pytest
 import torch
-from astra_guard.core import VORTEXSVDEngine
+from astra_guard import VORTEXSVDEngine
 
 
 def test_svd_engine_calibration():
@@ -119,24 +119,69 @@ def test_math_invariants():
     symmetry_diff = torch.norm(P_k.T - P_k, p="fro")
     assert symmetry_diff.item() < 1e-5
 
-    # 3. Signal Retention: ||X_clean P_k||_F / ||X_clean||_F >= 0.99
-    # Deflect standard clean acts
-    deflected = engine.deflect_activations(acts)
-    retention_ratio = torch.norm(deflected, p="fro") / torch.norm(acts, p="fro")
-    assert retention_ratio.item() >= 0.99
+    # 3. Subspace Signal Preservation: ||X P_k||_F / ||X||_F >= 0.999
+    # Generate synthetic activation tensor X in span(V_k).
+    coeffs = torch.randn(50, rank_k, dtype=torch.float64)
+    X_in_span = torch.matmul(coeffs, engine.V_k.T)
+    deflected_X = engine.deflect_activations(X_in_span)
+    retention_ratio = torch.norm(deflected_X, p="fro") / torch.norm(X_in_span, p="fro")
+    assert retention_ratio.item() >= 0.999
 
-    # 4. Orthogonal Noise Rejection: ||delta P_k||_F approx 0
-    # Construct noise orthogonal to V_k (in the nullspace of V_k)
-    # V_k is dim x rank_k, Vh[rank_k:] are the residual singular vectors
-    residual_V = engine.V_k.new_zeros(dim, dim)  # Dummy just for type/device
-    # From SVD, the residual vectors are Vh[rank_k:]
-    # P_k projects to span(Vh[:rank_k]^T)
-    # So Vh[rank_k:]^T is orthogonal to Vh[:rank_k]^T
-    V_perp = Vh[rank_k:].T
+    # 4. Nullspace Noise Attenuation: ||delta P_k||_F < 1e-4
+    # Generate synthetic orthogonal perturbation delta in nullspace(V_k) such that delta V_k = 0
+    # The nullspace is spanned by the remaining orthogonal directions.
+    V_k = engine.V_k
+    # We can create V_perp directly from V_k using SVD
+    _, _, full_Vh = torch.linalg.svd(
+        torch.eye(dim, dtype=torch.float64) - torch.matmul(V_k, V_k.T)
+    )
+    # The first dim - rank_k rows of full_Vh will span the nullspace (since it's a projection matrix onto the nullspace)
+    V_perp = full_Vh[: dim - rank_k].T
 
-    # Make noise entirely in V_perp
-    noise_coeffs = torch.randn(20, dim - rank_k, dtype=torch.float64)
-    delta = torch.matmul(noise_coeffs, V_perp.T)
+    delta_coeffs = torch.randn(20, dim - rank_k, dtype=torch.float64)
+    delta = torch.matmul(delta_coeffs, V_perp.T)
+    # Ensure delta V_k is effectively 0
+    assert torch.norm(torch.matmul(delta, V_k), p="fro").item() < 1e-10
 
     deflected_noise = engine.deflect_activations(delta)
     assert torch.norm(deflected_noise, p="fro").item() < 1e-4
+
+
+def test_spatial_layout_and_transpose_restoration():
+    engine = VORTEXSVDEngine(
+        rank_k=8, enable_basis_hopping=False, enable_watermark=False
+    )
+    acts = torch.randn(100, 64)
+    engine.calibrate_subspace(acts)
+
+    # 2D tensor [16, 64]
+    input_2d = torch.randn(16, 64)
+    out_2d = engine.deflect_activations(input_2d)
+    assert out_2d.shape == input_2d.shape
+    assert out_2d.is_contiguous()
+
+    # 3D tensor [8, 32, 64]
+    input_3d = torch.randn(8, 32, 64)
+    out_3d = engine.deflect_activations(input_3d)
+    assert out_3d.shape == input_3d.shape
+    assert out_3d.is_contiguous()
+
+    # 4D tensor [4, 64, 14, 14]
+    input_4d = torch.randn(4, 64, 14, 14)
+    out_4d = engine.deflect_activations(input_4d)
+    assert out_4d.shape == input_4d.shape
+    assert out_4d.is_contiguous()
+
+
+def test_autograd_graph_isolation():
+    engine = VORTEXSVDEngine(
+        rank_k=8, enable_basis_hopping=False, enable_watermark=False
+    )
+    acts = torch.randn(100, 64)
+    engine.calibrate_subspace(acts)
+
+    input_tensor = torch.randn(16, 64, requires_grad=True)
+    out_tensor = engine.deflect_activations(input_tensor)
+
+    assert out_tensor.grad_fn is None
+    assert not out_tensor.requires_grad

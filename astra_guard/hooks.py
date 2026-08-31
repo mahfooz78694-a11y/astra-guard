@@ -7,7 +7,7 @@ Copyright 2026 MD Mahfooz & Alsaad Alam
 import logging
 import torch
 import torch.nn as nn
-from typing import Optional, Any, Union, Tuple
+from typing import Optional, Any
 from astra_guard import VORTEXSVDEngine
 
 logger = logging.getLogger("astra_guard")
@@ -30,9 +30,12 @@ class ZVILGuard:
         preallocate_buffers: bool = False,
         vram_threshold_mb: int = 1000,
     ):
+        import os
+
         self.model = model
         self.target_layer_name = target_layer
         self.vram_threshold_mb = vram_threshold_mb
+        self.memory_threshold = float(os.environ.get("ASTRA_MEMORY_THRESHOLD", 0.90))
         self.engine = VORTEXSVDEngine(
             rank_k=rank_k,
             enable_basis_hopping=enable_basis_hopping,
@@ -51,6 +54,12 @@ class ZVILGuard:
         raise KeyError(
             f"[ASTRA-ERROR] Layer {self.target_layer_name} not found in model hierarchy."
         )
+
+    def set_memory_headroom_threshold(self, threshold: float) -> None:
+        """Sets the VRAM utilization fraction threshold for circuit-breaker pass-through."""
+        if not 0.0 < threshold < 1.0:
+            raise ValueError("Threshold must be a float strictly between 0.0 and 1.0")
+        self.memory_threshold = float(threshold)
 
     def calibrate(self, dataloader: Any, num_batches: int = 5) -> "ZVILGuard":
         logger.info(
@@ -90,12 +99,12 @@ class ZVILGuard:
     def _check_circuit_breaker(self) -> bool:
         if torch.cuda.is_available():
             try:
-                free_mem, _ = torch.cuda.mem_get_info()
-                free_mb = free_mem / (1024 * 1024)
-                if free_mb < self.vram_threshold_mb:
+                free_mem, total_mem = torch.cuda.mem_get_info()
+                used_mem_fraction = 1.0 - (free_mem / total_mem)
+                if used_mem_fraction > self.memory_threshold:
                     if not self.circuit_breaker_tripped:
                         logger.warning(
-                            f"[ASTRA CIRCUIT-BREAKER] Low VRAM ({free_mb:.1f}MB). Switched to Safe Pass-Through Mode."
+                            f"[ASTRA CIRCUIT-BREAKER] High VRAM utilization ({used_mem_fraction*100:.1f}%). Switched to Safe Pass-Through Mode."
                         )
                         self.circuit_breaker_tripped = True
                     return True
