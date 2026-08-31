@@ -82,11 +82,47 @@ To prevent gradient-based adaptive white-box attacks (e.g., Backward Pass Differ
              [ Deflected Activation Tensor ] ──► Clean Prediction
 ```
 ---
+## 🛠️ Diagnostics & Troubleshooting
+
+1. **C++17 / Cython Native Build Failures:**
+   - Problem: `ModuleNotFoundError: No module named 'astra_guard.core'` or compilation errors on systems missing development headers.
+   - Prescriptions:
+     - Diagnostic command to verify extension loading: `python -c "import astra_guard; print(astra_guard.__file__)"`
+     - Rebuilding in-place with verbose flags: `CFLAGS="-O3 -fPIC" python setup.py build_ext --inplace`
+     - Fallback override: Force the pure PyTorch fallback via an environment variable (`ASTRA_FORCE_PYTORCH_FALLBACK=1`) without breaking runtime execution.
+
+2. **CUDA Device / Tensor Stride Mismatches:**
+   - Problem: Stride incompatibility on non-contiguous activation tensors during spatial unrolling or multi-GPU model parallelism.
+   - Solution: Explicit memory layout rectification via `.contiguous()` before the projection call and setting pinned memory allocations.
+
+3. **VRAM Out-Of-Memory (OOM) & Circuit-Breaker Triggering:**
+   - Problem: Batch spikes causing activation tensor projection allocation failures.
+   - Solution: Configuration of the integrated memory safety valve. The `mem_get_info` function triggers dynamic tensor downsampling or CPU offloading. Command to tune the memory safety threshold:
+     ```python
+     guard.set_memory_headroom_threshold(0.85) # Threshold before safe pass-through trigger
+     ```
+
+4. **Autograd Tape Leakage Warning:**
+   - Problem: `RuntimeError: Trying to backward through the graph a second time` during evaluation hooks.
+   - Solution: Verification of explicit severance via `.detach()` on deflected outputs.
+
+---
 ## ⚙️ Key Technical Specifications
 * **Multi-Rank Compatibility:** Native support for Linear layers (2D `[B, C]`), Transformer sequence activations (3D `[B, S, C]`), and Conv2D feature maps (4D `[B, C, H, W]`).
 * **Automated Circuit Breaking:** Integrated memory monitoring (`mem_get_info`) prevents VRAM OOM by falling back to OpenMP CPU execution or dynamic tensor downsampling when memory thresholds exceed 90%.
 * **Failover Matrix Conditioning:** Incorporates QR-decomposition fallback ($A = QR$) to maintain numerical stability if iterative SVD solver convergence fails on ill-conditioned matrices.
 * **Transient FP64 Compute Precision:** Executes matrix decomposition in IEEE 754 Float64 for maximum numerical precision before casting back to model precision (FP32 / FP16 / BF16).
+---
+## ⚙️ Environment Variables & Runtime Flags
+
+| Environment Variable | Default Value | Target Subsystem | Operational Impact |
+| :--- | :--- | :--- | :--- |
+| `ASTRA_FORCE_PYTORCH_FALLBACK` | `0` | Engine Dispatch | Forces pure Python/PyTorch fallback regardless of compiled C++ binaries. |
+| `ASTRA_LOG_LEVEL` | `INFO` | Diagnostics | Log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`). |
+| `ASTRA_MEMORY_THRESHOLD` | `0.90` | Circuit Breaker | Max VRAM utilization fraction before engaging safe pass-through mode. |
+| `ASTRA_MLOCK_ENABLED` | `1` | Memory Hardening | Enables POSIX `mlock()` execution to lock basis vectors in physical RAM. |
+| `ASTRA_STOCHASTIC_SCALE` | `1e-4` | Watermark Vector | Amplitude bound ($\epsilon_w$) for anti-BPDA watermark injection. |
+
 ---
 ## 📊 Hardware SLA & Latency Benchmarks
 Evaluated on batch size $B=32$ across standard deep learning acceleration platforms:
@@ -111,7 +147,25 @@ Empirical battle results evaluating `astra-guard` on deep vision models subjecte
 * Note: Table 2 latency reflects end-to-end multi-step gradient attack generation (e.g., 10-step PGD backward loops), whereas Table 1 isolates pure VORTEX-SVD middleware interception and projection overhead (< 0.08 ms).
 
 ---
-## 💻 Quickstart Integration Examples
+## 💻 Quickstart & Command Integration Reference
+
+### Verification & Diagnostics Suite
+```bash
+# Run strict mathematical invariant test suite
+pytest tests/test_svd_engine.py -v
+
+# Run full benchmark profiling with microsecond timer
+python -m benchmarks.benchmark_latency --device cuda --batch-size 32
+
+# Verify device placement and compiled C++ kernel linkage
+python -c "from astra_guard import ZVILGuard; print(ZVILGuard.inspect_environment())"
+```
+
+### Multi-Modal Integration Patterns
+* **Pattern A: Large Language Model (Decoder Transformer):** Intercepting MLP projection blocks (`model.layers[i].mlp.down_proj`).
+* **Pattern B: Convolutional Vision Model:** Intercepting bottleneck layers (`layer4.2.conv3`) with dynamic 4D feature-map flattening and restoration.
+* **Pattern C: Multi-Rank Batch Processing:** Handling variable sequence lengths with dynamic masking.
+
 ### Example 1: Basic Vision Model Shielding
 ```python
 import torch
@@ -164,6 +218,12 @@ ZVILGuard(
 AutoSubspaceTuner()
 ```
 * **`discover_optimal_layer(model: nn.Module) -> str`**: Analyzes neural architecture layout and identifies candidate bottleneck feature layers best suited for SVD deflection.
+---
+## 🔒 Air-Gapped Security & Privacy Guarantees
+* **Zero Outbound Telemetry:** No analytics, ping-backs, or model data transfer. 100% compute is local to the runtime host.
+* **Non-Persistent In-Memory Operations:** Projection matrices $P_k$ and activation buffers exist purely in volatilized RAM/VRAM with zero disk writes.
+* **Process Isolation & Memory Locking:** Support for `mlock` on host memory to prevent kernel swapping to untrusted swap partitions.
+
 ---
 ## 🔐 Compliance Note
 `astra-guard` is engineered with AI safety frameworks in mind. However, as an academic proof-of-concept, it is not formally certified for production enterprise deployment.

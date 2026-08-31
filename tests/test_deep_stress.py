@@ -40,7 +40,9 @@ def test_singular_value_degeneracy():
     assert not torch.isnan(out_zero).any()
 
     # Inf/NaN tensors
-    inf_t = torch.tensor([[float("inf"), float("-inf"), float("nan"), 0.0] for _ in range(10)])
+    inf_t = torch.tensor(
+        [[float("inf"), float("-inf"), float("nan"), 0.0] for _ in range(10)]
+    )
     assert engine.calibrate_subspace(inf_t)
     out_inf = engine.deflect_activations(inf_t)
     assert not torch.isnan(out_inf).any()

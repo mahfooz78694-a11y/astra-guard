@@ -17,7 +17,7 @@ except ImportError:
 try:
     url = "https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt"
     response = urllib.request.urlopen(url)
-    imagenet_classes = [line.decode('utf-8').strip() for line in response.readlines()]
+    imagenet_classes = [line.decode("utf-8").strip() for line in response.readlines()]
 except Exception:
     imagenet_classes = [f"class_{i}" for i in range(1000)]
 
@@ -26,10 +26,12 @@ device = torch.device("cpu")
 model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT).to(device)
 model.eval()
 
-transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-])
+transform = transforms.Compose(
+    [
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+    ]
+)
 
 
 def tensor_to_image(tensor):
@@ -46,28 +48,37 @@ def create_spectrum_plot(s_corrupted, threshold, s_purified):
     x = list(range(len(s_corrupted)))
 
     # Red Curve: Corrupted Singular Values
-    fig.add_trace(go.Scatter(
-        x=x, y=s_corrupted,
-        mode='lines',
-        name='Corrupted (Σ)',
-        line=dict(color='red', width=2)
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=x,
+            y=s_corrupted,
+            mode="lines",
+            name="Corrupted (Σ)",
+            line=dict(color="red", width=2),
+        )
+    )
 
     # Blue Curve: Purified Singular Values
-    fig.add_trace(go.Scatter(
-        x=x, y=s_purified,
-        mode='lines',
-        name='Purified (P_clean)',
-        line=dict(color='blue', width=2)
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=x,
+            y=s_purified,
+            mode="lines",
+            name="Purified (P_clean)",
+            line=dict(color="blue", width=2),
+        )
+    )
 
     # Green Dotted Line: Dynamic Truncation Cutoff Threshold
-    fig.add_trace(go.Scatter(
-        x=[0, len(s_corrupted)-1], y=[threshold, threshold],
-        mode='lines',
-        name='Truncation Threshold (τ)',
-        line=dict(color='green', width=2, dash='dot')
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=[0, len(s_corrupted) - 1],
+            y=[threshold, threshold],
+            mode="lines",
+            name="Truncation Threshold (τ)",
+            line=dict(color="green", width=2, dash="dot"),
+        )
+    )
 
     fig.update_layout(
         title="Real-Time Singular Spectrum Decomposition",
@@ -77,7 +88,7 @@ def create_spectrum_plot(s_corrupted, threshold, s_purified):
         template="plotly_dark",
         plot_bgcolor="rgba(15, 23, 42, 0.6)",
         paper_bgcolor="rgba(15, 23, 42, 0.6)",
-        margin=dict(l=20, r=20, t=40, b=20)
+        margin=dict(l=20, r=20, t=40, b=20),
     )
     return fig
 
@@ -85,7 +96,7 @@ def create_spectrum_plot(s_corrupted, threshold, s_purified):
 def run_pipeline(img_input, attack_method, eps, defense_enabled_str, custom_noise):
     if img_input is None:
         # Create a dummy image
-        img_input = Image.new('RGB', (224, 224), color='white')
+        img_input = Image.new("RGB", (224, 224), color="white")
 
     input_tensor = transform(img_input).unsqueeze(0).to(device)
 
@@ -146,14 +157,14 @@ def run_pipeline(img_input, attack_method, eps, defense_enabled_str, custom_nois
     s_purified = np.random.rand(3)
 
     # Apply defense to tensor
-    if defense_enabled and 'ZVILGuard' in globals() and ZVILGuard is not None:
+    if defense_enabled and "ZVILGuard" in globals() and ZVILGuard is not None:
         # Re-initialize the model to use the globally defined dummy architecture here since ZVILGuard wraps it
         guard = ZVILGuard(model=model, target_layer="layer4.2.relu")
         with torch.no_grad():
-            if hasattr(guard, 'deflect_activations'):
+            if hasattr(guard, "deflect_activations"):
                 final_tensor = guard.deflect_activations(adv_tensor)
             else:
-                final_tensor = adv_tensor # No raw math implementation
+                final_tensor = adv_tensor  # No raw math implementation
     elif defense_enabled:
         # Opaque API wrapper usage, no raw math
         final_tensor = adv_tensor
@@ -194,19 +205,28 @@ def run_pipeline(img_input, attack_method, eps, defense_enabled_str, custom_nois
     fig = create_spectrum_plot(s_corrupted, threshold, s_purified)
 
     # Entropy Delta (dummy calculation for demo purposes)
-    entropy = -np.sum(prob_clean.cpu().numpy() * np.log2(prob_clean.cpu().numpy() + 1e-10))
-    entropy_adv = -np.sum(prob_final.cpu().numpy() * np.log2(prob_final.cpu().numpy() + 1e-10))
+    entropy = -np.sum(
+        prob_clean.cpu().numpy() * np.log2(prob_clean.cpu().numpy() + 1e-10)
+    )
+    entropy_adv = -np.sum(
+        prob_final.cpu().numpy() * np.log2(prob_final.cpu().numpy() + 1e-10)
+    )
     delta_h = entropy_adv - entropy
 
     latency_str = f"{latency:.2f} ms"
     entropy_str = f"{delta_h:.4f} bits"
 
     return (
-        img_clean_out, img_noise_out, img_final_out,
+        img_clean_out,
+        img_noise_out,
+        img_final_out,
         fig,
         status,
-        pred_clean_str, pred_adv_str, pred_final_str,
-        latency_str, entropy_str
+        pred_clean_str,
+        pred_adv_str,
+        pred_final_str,
+        latency_str,
+        entropy_str,
     )
 
 
@@ -239,52 +259,75 @@ def create_ui():
             with gr.Column(scale=1, elem_classes="card"):
                 gr.Markdown("### 🎛️ Attack Vectors & Configurations")
 
-                input_image = gr.Image(type="pil", label="Input Image (Upload or Select)", height=256)
+                input_image = gr.Image(
+                    type="pil", label="Input Image (Upload or Select)", height=256
+                )
 
                 _ = gr.Dropdown(
                     choices=["resnet18"],
                     value="resnet18",
                     label="Target Model",
-                    interactive=False
+                    interactive=False,
                 )
 
                 attack_selector = gr.Dropdown(
-                    choices=["FGSM (Fast Gradient Sign)", "PGD-100 (Projected Gradient Descent)", "Gaussian Spectral Noise"],
+                    choices=[
+                        "FGSM (Fast Gradient Sign)",
+                        "PGD-100 (Projected Gradient Descent)",
+                        "Gaussian Spectral Noise",
+                    ],
                     value="FGSM (Fast Gradient Sign)",
-                    label="Attack Method"
+                    label="Attack Method",
                 )
 
                 eps_slider = gr.Slider(
-                    minimum=0.0, maximum=0.30, step=0.01, value=0.10,
-                    label="Perturbation Magnitude (ε)"
+                    minimum=0.0,
+                    maximum=0.30,
+                    step=0.01,
+                    value=0.10,
+                    label="Perturbation Magnitude (ε)",
                 )
 
                 defense_radio = gr.Radio(
-                    choices=["ASTRA Guardrail ENABLED (VORTEX-SVD v2.0)", "Guardrail DISABLED (Raw Corrupted Stream)"],
+                    choices=[
+                        "ASTRA Guardrail ENABLED (VORTEX-SVD v2.0)",
+                        "Guardrail DISABLED (Raw Corrupted Stream)",
+                    ],
                     value="ASTRA Guardrail ENABLED (VORTEX-SVD v2.0)",
-                    label="Defense Status"
+                    label="Defense Status",
                 )
 
-                custom_noise_checkbox = gr.Checkbox(label="Advanced: Inject Arbitrary Custom Perturbation Matrix", value=False)
+                custom_noise_checkbox = gr.Checkbox(
+                    label="Advanced: Inject Arbitrary Custom Perturbation Matrix",
+                    value=False,
+                )
                 gr.Examples(
                     examples=[
                         "https://raw.githubusercontent.com/pytorch/hub/master/images/dog.jpg",
                         "https://upload.wikimedia.org/wikipedia/commons/3/3a/Cat03.jpg",
-                        "https://upload.wikimedia.org/wikipedia/commons/1/18/Ostrich_in_South_Africa.JPG"
+                        "https://upload.wikimedia.org/wikipedia/commons/1/18/Ostrich_in_South_Africa.JPG",
                     ],
                     inputs=input_image,
-                    label="Sample Images"
+                    label="Sample Images",
                 )
 
-                execute_btn = gr.Button("⚡ Execute Inference & Deflection Pipeline", variant="primary")
+                execute_btn = gr.Button(
+                    "⚡ Execute Inference & Deflection Pipeline", variant="primary"
+                )
 
             # Center Column: Spatial Canvas
             with gr.Column(scale=2, elem_classes="card"):
                 gr.Markdown("### 👁️ Real-Time Spatial Reconstruction")
                 with gr.Row():
-                    img_clean = gr.Image(label="1. Original Clean Input", interactive=False)
-                    img_noise = gr.Image(label="2. Adversarial Perturbation (δ)", interactive=False)
-                    img_out = gr.Image(label="3. Cleansed & Restored Output", interactive=False)
+                    img_clean = gr.Image(
+                        label="1. Original Clean Input", interactive=False
+                    )
+                    img_noise = gr.Image(
+                        label="2. Adversarial Perturbation (δ)", interactive=False
+                    )
+                    img_out = gr.Image(
+                        label="3. Cleansed & Restored Output", interactive=False
+                    )
 
                 gr.Markdown("### 📊 Singular Spectrum Decomposition")
                 spectrum_plot = gr.Plot(label="Singular Spectrum")
@@ -299,22 +342,51 @@ def create_ui():
 
                 with gr.Group(elem_classes="metric-box"):
                     gr.Markdown("#### Classification (Top 1)")
-                    pred_clean = gr.Textbox(label="Clean Class Prediction", interactive=False)
-                    pred_attack = gr.Textbox(label="Attacked Class Prediction", interactive=False)
-                    pred_final = gr.Textbox(label="Final Protected Class", interactive=False)
+                    pred_clean = gr.Textbox(
+                        label="Clean Class Prediction", interactive=False
+                    )
+                    pred_attack = gr.Textbox(
+                        label="Attacked Class Prediction", interactive=False
+                    )
+                    pred_final = gr.Textbox(
+                        label="Final Protected Class", interactive=False
+                    )
 
                 with gr.Group(elem_classes="metric-box"):
                     gr.Markdown("#### System Latency Overhead")
-                    latency_display = gr.Textbox(label="VORTEX-SVD Intercept Time", value="< 0.05 ms", interactive=False)
+                    latency_display = gr.Textbox(
+                        label="VORTEX-SVD Intercept Time",
+                        value="< 0.05 ms",
+                        interactive=False,
+                    )
 
                 with gr.Group(elem_classes="metric-box"):
                     gr.Markdown("#### Shannon Entropy Delta (ΔH)")
-                    entropy_display = gr.Textbox(label="Entropy Recovery", value="0.00 bits", interactive=False)
+                    entropy_display = gr.Textbox(
+                        label="Entropy Recovery", value="0.00 bits", interactive=False
+                    )
 
         execute_btn.click(
             fn=run_pipeline,
-            inputs=[input_image, attack_selector, eps_slider, defense_radio, custom_noise_checkbox],
-            outputs=[img_clean, img_noise, img_out, spectrum_plot, status_badge, pred_clean, pred_attack, pred_final, latency_display, entropy_display]
+            inputs=[
+                input_image,
+                attack_selector,
+                eps_slider,
+                defense_radio,
+                custom_noise_checkbox,
+            ],
+            outputs=[
+                img_clean,
+                img_noise,
+                img_out,
+                spectrum_plot,
+                status_badge,
+                pred_clean,
+                pred_attack,
+                pred_final,
+                latency_display,
+                entropy_display,
+            ],
         )
 
         return demo

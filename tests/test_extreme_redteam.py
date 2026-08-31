@@ -26,8 +26,12 @@ def test_vector1_binary_inspection():
     1. Binary Inspection: Verify via automated assertions that compiled dynamic binaries (.so/.pyd)
     do not expose raw Cython/C++ source code or unstripped internal math symbols.
     """
-    package_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "astra_guard"))
-    binaries = glob(os.path.join(package_dir, "*.so")) + glob(os.path.join(package_dir, "*.pyd"))
+    package_dir = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "astra_guard")
+    )
+    binaries = glob(os.path.join(package_dir, "*.so")) + glob(
+        os.path.join(package_dir, "*.pyd")
+    )
 
     assert len(binaries) > 0, "No compiled binaries found in astra_guard directory."
 
@@ -38,24 +42,48 @@ def test_vector1_binary_inspection():
 
             lines = result.stdout.split("\n")
 
-            has_pyx_logic = any(".pyx" in line and "=" in line for line in lines if not line.startswith("/"))
-            has_cpp_logic = any(".cpp" in line and "=" in line for line in lines if not line.startswith("/"))
+            has_pyx_logic = any(
+                ".pyx" in line and "=" in line
+                for line in lines
+                if not line.startswith("/")
+            )
+            has_cpp_logic = any(
+                ".cpp" in line and "=" in line
+                for line in lines
+                if not line.startswith("/")
+            )
 
-            assert not has_pyx_logic, f"Found raw Cython (.pyx) source logic in {binary}"
+            assert (
+                not has_pyx_logic
+            ), f"Found raw Cython (.pyx) source logic in {binary}"
             assert not has_cpp_logic, f"Found raw C++ (.cpp) source logic in {binary}"
 
             # Check for unstripped internal math symbols
             try:
-                nm_result = subprocess.run(["nm", "-g", binary], capture_output=True, text=True)
+                nm_result = subprocess.run(
+                    ["nm", "-g", binary], capture_output=True, text=True
+                )
                 if nm_result.returncode == 0:
-                    assert "calibrate_subspace" not in nm_result.stdout, "Found unstripped symbol 'calibrate_subspace'"
-                    assert "deflect_activations" not in nm_result.stdout, "Found unstripped symbol 'deflect_activations'"
+                    assert (
+                        "calibrate_subspace" not in nm_result.stdout
+                    ), "Found unstripped symbol 'calibrate_subspace'"
+                    assert (
+                        "deflect_activations" not in nm_result.stdout
+                    ), "Found unstripped symbol 'deflect_activations'"
                 else:
-                    assert "calibrate_subspace" not in result.stdout, "Found unstripped symbol 'calibrate_subspace' via strings"
-                    assert "deflect_activations" not in result.stdout, "Found unstripped symbol 'deflect_activations' via strings"
+                    assert (
+                        "calibrate_subspace" not in result.stdout
+                    ), "Found unstripped symbol 'calibrate_subspace' via strings"
+                    assert (
+                        "deflect_activations" not in result.stdout
+                    ), "Found unstripped symbol 'deflect_activations' via strings"
             except FileNotFoundError:
-                assert "calibrate_subspace" not in result.stdout, "Found unstripped symbol 'calibrate_subspace' via strings"
-                assert "deflect_activations" not in result.stdout, "Found unstripped symbol 'deflect_activations' via strings"
+                assert (
+                    "calibrate_subspace" not in result.stdout
+                ), "Found unstripped symbol 'calibrate_subspace' via strings"
+                assert (
+                    "deflect_activations" not in result.stdout
+                ), "Found unstripped symbol 'deflect_activations' via strings"
         except FileNotFoundError:
             # strings command is not available, skip test
             pass
@@ -149,7 +177,9 @@ def test_vector3_memory_concurrency_leak():
     if torch.cuda.is_available():
         final_cuda_mem = torch.cuda.memory_allocated()
         cuda_growth_mb = (final_cuda_mem - initial_cuda_mem) / (1024 * 1024)
-        assert cuda_growth_mb < 50, f"CUDA memory leak detected: grew by {cuda_growth_mb:.2f} MB"
+        assert (
+            cuda_growth_mb < 50
+        ), f"CUDA memory leak detected: grew by {cuda_growth_mb:.2f} MB"
 
 
 def test_vector4_developer_safeguards():

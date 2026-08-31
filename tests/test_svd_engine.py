@@ -4,7 +4,9 @@ from astra_guard.core import VORTEXSVDEngine
 
 
 def test_svd_engine_calibration():
-    engine = VORTEXSVDEngine(rank_k=8, enable_basis_hopping=False, enable_watermark=False)
+    engine = VORTEXSVDEngine(
+        rank_k=8, enable_basis_hopping=False, enable_watermark=False
+    )
     acts = torch.randn(100, 32)
     assert engine.calibrate_subspace(acts)
     assert engine.P_parallel is not None
@@ -52,7 +54,22 @@ def test_numerical_stability_degenerate():
     U, _ = torch.linalg.qr(torch.randn(20, 10))
     V, _ = torch.linalg.qr(torch.randn(10, 10))
     # Using explicit small floats instead of scientific notation to avoid security audit leak trigger
-    S = torch.diag(torch.tensor([1000000.0, 10000.0, 100.0, 1.0, 0.01, 0.0001, 0.000001, 0.00000001, 0.0000000001, 0.000000000001]))
+    S = torch.diag(
+        torch.tensor(
+            [
+                1000000.0,
+                10000.0,
+                100.0,
+                1.0,
+                0.01,
+                0.0001,
+                0.000001,
+                0.00000001,
+                0.0000000001,
+                0.000000000001,
+            ]
+        )
+    )
     ill_acts = U @ S @ V.T
     assert engine.calibrate_subspace(ill_acts)
     out_ill = engine.deflect_activations(ill_acts)
@@ -60,7 +77,9 @@ def test_numerical_stability_degenerate():
 
 
 def test_precision_casting():
-    engine = VORTEXSVDEngine(rank_k=4, enable_basis_hopping=False, enable_watermark=False)
+    engine = VORTEXSVDEngine(
+        rank_k=4, enable_basis_hopping=False, enable_watermark=False
+    )
     acts = torch.randn(20, 10, dtype=torch.float32)
     engine.calibrate_subspace(acts)
 
@@ -76,7 +95,9 @@ def test_precision_casting():
 def test_math_invariants():
     dim = 32
     rank_k = 16
-    engine = VORTEXSVDEngine(rank_k=rank_k, enable_basis_hopping=False, enable_watermark=False)
+    engine = VORTEXSVDEngine(
+        rank_k=rank_k, enable_basis_hopping=False, enable_watermark=False
+    )
 
     # Create structured clean activations
     acts = torch.randn(100, dim, dtype=torch.float64)

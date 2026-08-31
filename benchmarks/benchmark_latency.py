@@ -5,6 +5,7 @@ import os
 import psutil
 from astra_guard import ZVILGuard
 
+
 class DummyLinearModel(nn.Module):
     def __init__(self):
         super().__init__()
@@ -13,6 +14,7 @@ class DummyLinearModel(nn.Module):
     def forward(self, x):
         return self.fc(x)
 
+
 class DummyTransformerModel(nn.Module):
     def __init__(self):
         super().__init__()
@@ -20,6 +22,7 @@ class DummyTransformerModel(nn.Module):
 
     def forward(self, x):
         return self.attn(x)
+
 
 class DummyConvModel(nn.Module):
     def __init__(self):
@@ -68,6 +71,7 @@ def benchmark_layer(model, layer_name, input_tensor, num_warmup=10, num_iters=10
     class DummyLoader:
         def __init__(self, x):
             self.x = x
+
         def __iter__(self):
             yield (self.x,)
 
@@ -107,6 +111,7 @@ def benchmark_layer(model, layer_name, input_tensor, num_warmup=10, num_iters=10
     print(f"Net Overhead:      {net_latency:.4f} ms")
     print(f"Memory Diff:       {mem_diff:.4f} MB\n")
     return baseline_time, protected_time, net_latency, mem_diff
+
 
 if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"

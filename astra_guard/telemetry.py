@@ -18,7 +18,14 @@ class MetricsHandler(http.server.SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-type", "text/plain; version=0.0.4")
             self.end_headers()
-            metrics = "# HELP astra_deflection_latency_ms Last deflection latency in ms\n" "# TYPE astra_deflection_latency_ms gauge\n" "astra_deflection_latency_ms 0.0564\n" "# HELP astra_circuit_breaker_status Circuit breaker state\n" "# TYPE astra_circuit_breaker_status gauge\n" "astra_circuit_breaker_status 0\n"
+            metrics = (
+                "# HELP astra_deflection_latency_ms Last deflection latency in ms\n"
+                "# TYPE astra_deflection_latency_ms gauge\n"
+                "astra_deflection_latency_ms 0.0564\n"
+                "# HELP astra_circuit_breaker_status Circuit breaker state\n"
+                "# TYPE astra_circuit_breaker_status gauge\n"
+                "astra_circuit_breaker_status 0\n"
+            )
             self.wfile.write(metrics.encode("utf-8"))
         else:
             self.send_response(404)
@@ -31,7 +38,9 @@ def start_telemetry_server(port: int = 9090) -> None:
     def run_s():
         try:
             with socketserver.TCPServer(("", port), MetricsHandler) as httpd:
-                logger.info(f"[ASTRA TELEMETRY] Prometheus server active at http://localhost:{port}/metrics")
+                logger.info(
+                    f"[ASTRA TELEMETRY] Prometheus server active at http://localhost:{port}/metrics"
+                )
                 httpd.serve_forever()
         except Exception as e:
             logger.error(f"[ASTRA TELEMETRY ERROR] {e}")

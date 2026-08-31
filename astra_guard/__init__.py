@@ -4,7 +4,9 @@ except ImportError:
     import logging
 
     logger = logging.getLogger("astra_guard")
-    logger.warning("astra_guard.core not compiled. Falling back to pure Python implementation.")
+    logger.warning(
+        "astra_guard.core not compiled. Falling back to pure Python implementation."
+    )
     from astra_guard.fallback import VORTEXSVDEngine
 
 from astra_guard.hooks import ZVILGuard
